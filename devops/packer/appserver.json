@@ -1,0 +1,71 @@
+{
+  "variables": {
+    "scm_id": "",
+    "scm_branch": "",
+    "region": "us-east-1",
+    "vpc_id": "",
+    "subnet_id": "",
+    "aws_access_key": "",
+    "aws_secret_key": "",
+    "source_ami": "ami-bb156ad1",
+    "instance_type": "t2.micro",
+    "username": "ubuntu"
+  },
+  "builders": [{
+    "type": "amazon-ebs",
+    "access_key": "{{user `aws_access_key`}}",
+    "secret_key": "{{user `aws_secret_key`}}",
+    "region": "{{user `region`}}",
+    "vpc_id": "{{user `vpc_id`}}",
+    "subnet_id": "{{user `subnet_id`}}",
+    "source_ami": "{{user `source_ami`}}",
+    "instance_type": "{{user `instance_type`}}",
+    "ssh_username": "{{user `username`}}",
+    "ami_name": "Lab System {{timestamp}}",
+    "associate_public_ip_address": true,
+    "tags": {
+      "application": "Some-Place",
+      "environment": "Production",
+      "scm_id": "{{user `scm_id`}}",
+      "scm_branch": "{{user `scm_branch`}}"
+    }
+  }],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "sudo mkdir {{user `deploy_dir`}}",
+        "sudo chown {{user `username`}} {{user `deploy_dir`}}"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "./",
+      "destination": "{{user `deploy_dir`}}",
+      "direction": "upload"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "sudo apt-get update",
+        "sudo apt-get install -y build-essential ruby-dev"
+      ]
+    },
+    {
+      "type": "chef-solo",
+      "cookbook_paths": [
+        "./devops/provisioning/chef/librarian/cookbooks",
+        "./devops/provisioning/chef/cookbooks"
+      ],
+      "json": {
+        "application": {
+        }
+      },
+      "roles_path": "devops/provisioning/chef/roles",
+      "run_list": [
+        "role[application]"
+        "role[webserver]",
+      ]
+    }
+  ]
+}
